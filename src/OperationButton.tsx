@@ -1,6 +1,11 @@
 import { ACTIONS } from './App';
 
-export default function OperationButton({ operation, dispatch }) {
+interface Props {
+  operation: string;
+  dispatch: React.Dispatch<{ type: string; payload?: { operation?: string } }>;
+}
+
+export default function OperationButton({ operation, dispatch }: Props) {
   return (
     <button
       onClick={() =>
