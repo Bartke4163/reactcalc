@@ -11,67 +11,87 @@ export const ACTIONS = {
   EVALUATE: 'evaluate',
 };
 
-function reducer(state, { type, payload }) {
+interface State {
+  currentOperand?: string;
+  previousOperand?: string;
+  operation?: string;
+  overwrite?: boolean;
+}
+
+interface Action {
+  type: string;
+  payload?: {
+    digit?: string;
+    operation?: string;
+  };
+}
+
+function reducer(state: State, action: Action): State {
+  const { type, payload } = action;
+
   switch (type) {
     case ACTIONS.ADD_DIGIT:
       if (state.overwrite) {
         return {
           ...state,
-          currentOperand: payload.digit,
+          currentOperand: payload?.digit === '.' ? '0.' : payload?.digit,
           overwrite: false,
         };
       }
 
-      if (payload.digit === '0' && state.currentOperand === '0') {
+      if (payload?.digit === '0' && state.currentOperand === '0') {
         return state;
       }
       if (
-        (payload.digit === '.' && state.currentOperand === undefined) ||
-        (payload.digit === '.' && state.currentOperand.includes('.'))
+        (payload?.digit === '.' && state.currentOperand === undefined) ||
+        (payload?.digit === '.' && state.currentOperand?.includes('.'))
       ) {
         return state;
       }
       return {
         ...state,
-        currentOperand: `${state.currentOperand || ''}${payload.digit}`,
+        currentOperand: `${state.currentOperand || ''}${payload?.digit}`,
       };
 
     case ACTIONS.CLEAR:
       return {};
 
     case ACTIONS.CHOOSE_OPERATION:
-      if (state.currentOperand == null && state.previousOperand == null) {
+      if (
+        state.currentOperand === undefined &&
+        state.previousOperand === undefined
+      ) {
         return state;
       }
 
-      if (state.currentOperand == null) {
+      if (state.currentOperand === undefined) {
         return {
           ...state,
-          operation: payload.operation,
+          operation: payload?.operation,
         };
       }
 
-      if (state.previousOperand == null) {
+      if (state.previousOperand === undefined) {
         return {
           ...state,
-          operation: payload.operation,
+          operation: payload?.operation,
           previousOperand: state.currentOperand,
-          currentOperand: null,
+          currentOperand: undefined,
         };
       }
 
       return {
         ...state,
         previousOperand: evaluate(state),
-        operation: payload.operation,
-        currentOperand: null,
+        operation: payload?.operation,
+        currentOperand: undefined,
       };
 
     case ACTIONS.EVALUATE:
       if (
-        state.operation == null ||
-        state.currentOperand == null ||
-        state.previousOperand == null
+        state.operation === undefined ||
+        state.currentOperand === undefined ||
+        state.previousOperand === undefined
       ) {
         return state;
       }
@@ -79,8 +99,8 @@ function reducer(state, { type, payload }) {
       return {
         ...state,
         overwrite: true,
-        previousOperand: null,
-        operation: null,
+        previousOperand: undefined,
+        operation: undefined,
         currentOperand: evaluate(state),
       };
 
@@ -89,16 +109,16 @@ function reducer(state, { type, payload }) {
         return {
           ...state,
           overwrite: false,
-          currentOperand: null,
+          currentOperand: undefined,
         };
       }
 
-      if (state.currentOperand == null) return state;
+      if (state.currentOperand === undefined) return state;
 
       if (state.currentOperand.length === 1) {
         return {
           ...state,
-          currentOperand: null,
+          currentOperand: undefined,
         };
       }
 
@@ -106,49 +126,61 @@ function reducer(state, { type, payload }) {
         ...state,
         currentOperand: state.currentOperand.slice(0, -1),
       };
+
+    default:
+      return state;
   }
 }
 
-function evaluate({ currentOperand, previousOperand, operation }) {
-  const prev = parseFloat(previousOperand);
-  const current = parseFloat(currentOperand);
-  if (isNaN(prev) || isNaN(current)) return '';
-  let computation = ' ';
+function evaluate({
+  currentOperand,
+  previousOperand,
+  operation,
+}: State): string {
+  const prev = parseFloat(previousOperand || '');
+  const current = parseFloat(currentOperand || '');
+  if (isNaN(prev) || isNaN(current)) {
+    return '';
+  }
+  let computation = '';
   switch (operation) {
     case '+':
-      computation = prev + current;
+      computation = (prev + current).toString();
       break;
     case '-':
-      computation = prev - current;
+      computation = (prev - current).toString();
       break;
     case '*':
-      computation = prev * current;
+      computation = (prev * current).toString();
       break;
     case '/':
-      computation = prev / current;
+      computation = (prev / current).toString();
+      break;
+    default:
+      computation = '';
       break;
   }
 
-  return computation.toString();
+  return computation;
 }
 
 const INTEGER_FORMATTER = new Intl.NumberFormat('en-us', {
   maximumFractionDigits: 0,
 });
 
-function formatOperand(operand) {
-  if (operand == null) return;
+function formatOperand(operand?: string): string | undefined {
+  if (operand === undefined) return;
   const [integer, decimal] = operand.split('.');
-  if (decimal == null) return INTEGER_FORMATTER.format(integer);
-  return `${INTEGER_FORMATTER.format(integer)}.${decimal}`;
+  if (decimal === undefined) return INTEGER_FORMATTER.format(parseInt(integer));
+  return `${INTEGER_FORMATTER.format(parseInt(integer))}.${decimal}`;
 }
 
-export default function App() {
+export default function App(): JSX.Element {
   const [{ currentOperand, previousOperand, operation }, dispatch] = useReducer(
     reducer,
     {}
   );
-  // dispatch({ type: ACTIONS.ADD_DIGIT, payload: { digit: 1 } });
+
   return (
     <div className="calculator-grid">
       <div className="output">
